@@ -11,10 +11,22 @@ export default function Landing() {
   useEffect(() => {
     api
       .featuredItems()
-      .then(setFeatured)
-      .catch((e) => setError(e.message));
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setFeatured(res);
+        } else if (res && Array.isArray(res.data)) {
+          setFeatured(res.data);
+        } else if (res && Array.isArray(res.items)) {
+          setFeatured(res.items);
+        } else {
+          setFeatured([]);
+        }
+      })
+      .catch((e) => {
+        setError(e?.message || 'Error loading items');
+        setFeatured([]);
+      });
   }, []);
-
   return (
     <>
       <section className="hero">
@@ -60,23 +72,25 @@ export default function Landing() {
         </p>
       )}
 
-      {featured.length > 0 && <FeaturedCarousel items={featured.slice(0, 5)} />}
+      {Array.isArray(featured) && featured.length > 0 && (
+  <FeaturedCarousel items={featured.slice(0, 5)} />
+)}
 
-      <section className="section">
-        <div className="container">
-          <div className="section-head">
-            <h2>Fresh on the rack</h2>
-            <Link to="/browse" className="text-link">
-              View full catalog →
-            </Link>
-          </div>
-          <div className="item-grid">
-            {featured.slice(0, 6).map((item) => (
-              <ItemCard key={item.id} item={item} />
-            ))}
-          </div>
-        </div>
-      </section>
+<section className="section">
+  <div className="container">
+    <div className="section-head">
+      <h2>Fresh on the rack</h2>
+      <Link to="/browse" className="text-link">
+        View full catalog &rarr;
+      </Link>
+    </div>
+    <div className="item-grid">
+      {Array.isArray(featured) && featured.slice(0, 6).map((item) => (
+        <ItemCard key={item.id} item={item} />
+      ))}
+    </div>
+  </div>
+</section>
 
       <section className="section section-muted">
         <div className="container steps">
