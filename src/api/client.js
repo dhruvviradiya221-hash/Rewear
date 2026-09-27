@@ -1,4 +1,4 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'https://vercel.com/dhruvviradiya221-hash/rewear';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://rewear-1-m2m8.onrender.com';
 
 function getToken() {
   return localStorage.getItem('rewear_token');
