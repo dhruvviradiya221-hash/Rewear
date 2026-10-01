@@ -1,35 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
 import ImageGallery from '../components/ImageGallery';
+import LiveStatusBar from '../components/LiveStatusBar';
+import { useAuth } from '../context/AuthContext';
+import { useLiveData } from '../hooks/useLiveData';
 
 export default function ItemDetail() {
   const { id } = useParams();
   const { user, refreshUser } = useAuth();
-  const [item, setItem] = useState(null);
-  const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    api
-      .getItem(id)
-      .then((data) => setItem(data.item))
-      .catch((e) => setError(e.message));
-  }, [id]);
+  const { data, loading, error, lastUpdated, refresh } = useLiveData(
+    () => api.getItem(id).then((res) => res.item),
+    [id]
+  );
 
+  const item = data;
   const available = item && ['approved', 'available'].includes(item.status);
   const isOwner = user && item && user.id === item.userId;
 
   const onSwap = async () => {
     setMessage('');
+    setActionError('');
     setBusy(true);
     try {
       const res = await api.swapRequest(id);
       setMessage(res.message);
+      await refresh();
     } catch (e) {
-      setError(e.message);
+      setActionError(e.message);
     } finally {
       setBusy(false);
     }
@@ -37,15 +39,15 @@ export default function ItemDetail() {
 
   const onRedeem = async () => {
     setMessage('');
+    setActionError('');
     setBusy(true);
     try {
       const res = await api.redeemItem(id);
       setMessage(res.message);
       await refreshUser();
-      const data = await api.getItem(id);
-      setItem(data.item);
+      await refresh();
     } catch (e) {
-      setError(e.message);
+      setActionError(e.message);
     } finally {
       setBusy(false);
     }
@@ -73,6 +75,9 @@ export default function ItemDetail() {
       <Link to="/browse" className="back-link">
         ← Browse
       </Link>
+
+      <LiveStatusBar loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={refresh} />
+
       <div className="detail-grid">
         <ImageGallery images={item.images} title={item.title} />
         <div className="detail-panel">
@@ -117,7 +122,7 @@ export default function ItemDetail() {
           </div>
 
           {message && <p className="alert alert-success">{message}</p>}
-          {error && item && <p className="alert alert-error">{error}</p>}
+          {actionError && <p className="alert alert-error">{actionError}</p>}
 
           {user && !isOwner && available && (
             <div className="action-row">

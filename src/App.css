@@ -976,3 +976,88 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+/* Live sync status */
+.live-status-bar {
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 253, 249, 0.92);
+}
+
+.live-status-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.live-dot.is-live {
+  background: #2d9d6e;
+  box-shadow: 0 0 0 3px rgba(45, 157, 110, 0.2);
+}
+
+.live-dot.is-syncing {
+  background: var(--gold);
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+
+.live-dot.is-error {
+  background: #c45c5c;
+}
+
+.live-status-text {
+  flex: 1;
+}
+
+.live-refresh {
+  margin-left: auto;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.btn-sm {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.75rem;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Skeleton loaders */
+.skeleton-grid {
+  pointer-events: none;
+}
+
+.skeleton-card {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  background: linear-gradient(
+    110deg,
+    rgba(30, 77, 58, 0.06) 8%,
+    rgba(30, 77, 58, 0.12) 18%,
+    rgba(30, 77, 58, 0.06) 33%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}

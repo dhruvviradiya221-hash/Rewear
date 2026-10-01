@@ -1,37 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { api, mediaUrl } from '../api/client';
+import LiveStatusBar from '../components/LiveStatusBar';
 import { useAuth } from '../context/AuthContext';
+import { useLiveData } from '../hooks/useLiveData';
 
 export default function Dashboard() {
   const { user, refreshUser } = useAuth();
   const location = useLocation();
-  const [items, setItems] = useState([]);
-  const [swaps, setSwaps] = useState({ ongoing: [], completed: [] });
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
 
-  const load = async () => {
-    try {
-      const [myItems, mySwaps] = await Promise.all([api.myItems(), api.mySwaps()]);
-      setItems(myItems);
-      setSwaps(mySwaps);
-      await refreshUser();
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { data, loading, error, lastUpdated, refresh } = useLiveData(async () => {
+    const [myItems, mySwaps] = await Promise.all([api.myItems(), api.mySwaps()]);
+    await refreshUser();
+    return { items: myItems, swaps: mySwaps };
   }, []);
 
+  const items = data?.items || [];
+  const swaps = data?.swaps || { ongoing: [], completed: [] };
+
   const respond = async (id, action) => {
+    setActionError('');
     try {
       await api.respondSwap(id, action);
-      await load();
+      await refresh();
     } catch (e) {
-      setError(e.message);
+      setActionError(e.message);
     }
   };
 
@@ -47,10 +41,14 @@ export default function Dashboard() {
         </Link>
       </header>
 
+      <LiveStatusBar loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={refresh} />
+
       {location.state?.flash && (
         <p className="alert alert-success">{location.state.flash}</p>
       )}
-      {error && <p className="alert alert-error">{error}</p>}
+      {(error || actionError) && (
+        <p className="alert alert-error">{actionError || error}</p>
+      )}
 
       <section className="dashboard-profile">
         <div className="profile-card">
@@ -67,7 +65,7 @@ export default function Dashboard() {
 
       <section className="section-block">
         <h2>Your listings</h2>
-        {!items.length && <p className="muted">No items yet. List your first piece!</p>}
+        {!items.length && !loading && <p className="muted">No items yet. List your first piece!</p>}
         <div className="dashboard-items">
           {items.map((item) => (
             <article key={item.id} className="dash-item">
@@ -91,9 +89,9 @@ export default function Dashboard() {
 
       <section className="section-block">
         <h2>Ongoing swaps</h2>
-        {!swaps.ongoing.length && <p className="muted">No active swap requests.</p>}
+        {!swaps.ongoing?.length && <p className="muted">No active swap requests.</p>}
         <ul className="swap-list">
-          {swaps.ongoing.map((s) => (
+          {swaps.ongoing?.map((s) => (
             <li key={s.id} className="swap-row">
               <div>
                 <strong>{s.itemTitle}</strong>
@@ -123,9 +121,9 @@ export default function Dashboard() {
 
       <section className="section-block">
         <h2>Completed</h2>
-        {!swaps.completed.length && <p className="muted">No completed exchanges yet.</p>}
+        {!swaps.completed?.length && <p className="muted">No completed exchanges yet.</p>}
         <ul className="swap-list compact">
-          {swaps.completed.map((s) => (
+          {swaps.completed?.map((s) => (
             <li key={s.id}>
               {s.itemTitle} — {s.kind}, {s.status}
             </li>

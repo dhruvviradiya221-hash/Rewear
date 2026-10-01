@@ -1,44 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api, mediaUrl } from '../api/client';
+import LiveStatusBar from '../components/LiveStatusBar';
+import { useLiveData } from '../hooks/useLiveData';
 
 export default function Admin() {
-  const [pending, setPending] = useState([]);
-  const [all, setAll] = useState([]);
-  const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+  const [actionError, setActionError] = useState('');
 
-  const load = async () => {
-    try {
-      const [p, a] = await Promise.all([api.adminPending(), api.adminAllItems()]);
-      setPending(p);
-      setAll(a);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  useEffect(() => {
-    load();
+  const { data, loading, error, lastUpdated, refresh } = useLiveData(async () => {
+    const [pending, all] = await Promise.all([api.adminPending(), api.adminAllItems()]);
+    return { pending, all };
   }, []);
+
+  const pending = data?.pending || [];
+  const all = data?.all || [];
 
   const moderate = async (id, action) => {
     setMsg('');
+    setActionError('');
     try {
       const res = await api.adminModerate(id, action);
       setMsg(res.message);
-      await load();
+      await refresh();
     } catch (e) {
-      setError(e.message);
+      setActionError(e.message);
     }
   };
 
   const remove = async (id) => {
     if (!window.confirm('Remove this listing permanently?')) return;
+    setActionError('');
     try {
       await api.adminDelete(id);
-      await load();
+      await refresh();
     } catch (e) {
-      setError(e.message);
+      setActionError(e.message);
     }
   };
 
@@ -49,12 +45,14 @@ export default function Admin() {
         <p>Approve new listings, reject spam, and remove inappropriate items.</p>
       </header>
 
+      <LiveStatusBar loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={refresh} />
+
       {msg && <p className="alert alert-success">{msg}</p>}
-      {error && <p className="alert alert-error">{error}</p>}
+      {(error || actionError) && <p className="alert alert-error">{actionError || error}</p>}
 
       <section className="section-block">
         <h2>Pending approval ({pending.length})</h2>
-        {!pending.length && <p className="muted">Queue is clear.</p>}
+        {!pending.length && !loading && <p className="muted">Queue is clear.</p>}
         <div className="admin-grid">
           {pending.map((item) => (
             <article key={item.id} className="admin-card">
@@ -98,9 +96,7 @@ export default function Admin() {
                 <tr key={item.id}>
                   <td>
                     <div className="admin-table-item">
-                      {item.images?.[0] && (
-                        <img src={mediaUrl(item.images[0])} alt="" />
-                      )}
+                      {item.images?.[0] && <img src={mediaUrl(item.images[0])} alt="" />}
                       <span>{item.title}</span>
                     </div>
                   </td>

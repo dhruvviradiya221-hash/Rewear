@@ -1,27 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../api/client';
 import ItemCard from '../components/ItemCard';
+import LiveStatusBar from '../components/LiveStatusBar';
+import { useLiveData } from '../hooks/useLiveData';
 
-const CATEGORIES = ['', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Footwear'];
+const CATEGORIES = ['', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Footwear', 'Accessories'];
 
 export default function Browse() {
-  const [items, setItems] = useState([]);
   const [category, setCategory] = useState('');
   const [q, setQ] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
+  const { data: items, loading, error, lastUpdated, refresh } = useLiveData(async () => {
     const params = {};
     if (category) params.category = category;
     if (q.trim()) params.q = q.trim();
-    api
-      .listItems(params)
-      .then(setItems)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    return api.listItems(params);
   }, [category, q]);
+
+  const list = Array.isArray(items) ? items : [];
 
   return (
     <div className="container page">
@@ -29,6 +25,8 @@ export default function Browse() {
         <h1>Browse items</h1>
         <p>Every listing includes a photo gallery and full details for confident swapping.</p>
       </header>
+
+      <LiveStatusBar loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={refresh} />
 
       <div className="filters-bar">
         <input
@@ -52,11 +50,17 @@ export default function Browse() {
       </div>
 
       {error && <p className="alert alert-error">{error}</p>}
-      {loading && <p className="muted">Loading catalog…</p>}
-      {!loading && !items.length && <p className="muted">No items match your filters.</p>}
+      {loading && !list.length && (
+        <div className="item-grid skeleton-grid">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div key={n} className="skeleton-card" />
+          ))}
+        </div>
+      )}
+      {!loading && !list.length && !error && <p className="muted">No items match your filters.</p>}
 
       <div className="item-grid">
-        {items.map((item) => (
+        {list.map((item) => (
           <ItemCard key={item.id} item={item} />
         ))}
       </div>

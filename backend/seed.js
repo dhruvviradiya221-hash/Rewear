@@ -1,21 +1,51 @@
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const { db, persist, nextId } = require('./database');
 
 const localCatalog = [
-  ['01-teal-tie-top.jpeg', 'Teal Tie-Front Top', 'Tops', 'Blouse', 'teal, tie-front'],
-  ['02-floral-dress.jpeg', 'Floral Dress', 'Dresses', 'Dress', 'floral, occasion'],
-  ['03-navy-evening-dress.jpeg', 'Navy Evening Dress', 'Dresses', 'Evening dress', 'navy, occasion'],
-  ['04-denim-sherpa-jacket.jpeg', 'Denim Sherpa Jacket', 'Outerwear', 'Jacket', 'denim, sherpa'],
-  ['05-brown-sherpa-jacket.jpeg', 'Brown Sherpa Jacket', 'Outerwear', 'Jacket', 'brown, sherpa'],
-  ['06-red-wide-leg-pants.jpeg', 'Red Wide-Leg Pants', 'Bottoms', 'Trousers', 'red, wide-leg'],
-  ['07-olive-cargo-pants.jpeg', 'Olive Cargo Pants', 'Bottoms', 'Cargo pants', 'olive, cargo'],
-  ['08-gold-sandals.jpeg', 'Gold Sandals', 'Footwear', 'Sandals', 'gold, sandals'],
-  ['09-accessories-set.jpeg', 'Accessories Set', 'Accessories', 'Accessories', 'accessories'],
-  ['10-bow-flats.jpeg', 'Bow Ballet Flats', 'Footwear', 'Flats', 'bow, flats'],
-  ['11-black-sneakers.jpeg', 'Black Sneakers', 'Footwear', 'Sneakers', 'black, sneakers'],
-  ['12-off-shoulder-top-skirt.jpeg', 'Off-Shoulder Top and Skirt', 'Tops', 'Two-piece set', 'off-shoulder, set'],
-  ['13-black-crop-top.jpeg', 'Black Crop Top', 'Tops', 'Crop top', 'black, crop top'],
+  ['01-teal-tie-top.jpeg', 'Teal Tie-Front Top', 'Tops', 'Blouse', 'teal, tie-front', 'https://images.unsplash.com/photo-1564257570460-3a2a4f1c0c8a?w=1200&q=85'],
+  ['02-floral-dress.jpeg', 'Floral Dress', 'Dresses', 'Dress', 'floral, occasion', 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=1200&q=85'],
+  ['03-navy-evening-dress.jpeg', 'Navy Evening Dress', 'Dresses', 'Evening dress', 'navy, occasion', 'https://images.unsplash.com/photo-1515372039744-b72996277fc8?w=1200&q=85'],
+  ['04-denim-sherpa-jacket.jpeg', 'Denim Sherpa Jacket', 'Outerwear', 'Jacket', 'denim, sherpa', 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=1200&q=85'],
+  ['05-brown-sherpa-jacket.jpeg', 'Brown Sherpa Jacket', 'Outerwear', 'Jacket', 'brown, sherpa', 'https://images.unsplash.com/photo-1576995853123-5a10305d93b0?w=1200&q=85'],
+  ['06-red-wide-leg-pants.jpeg', 'Red Wide-Leg Pants', 'Bottoms', 'Trousers', 'red, wide-leg', 'https://images.unsplash.com/photo-1594938298604-c8148c4dae35?w=1200&q=85'],
+  ['07-olive-cargo-pants.jpeg', 'Olive Cargo Pants', 'Bottoms', 'Cargo pants', 'olive, cargo', 'https://images.unsplash.com/photo-1473966968600-fa801b869a7a?w=1200&q=85'],
+  ['08-gold-sandals.jpeg', 'Gold Sandals', 'Footwear', 'Sandals', 'gold, sandals', 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=1200&q=85'],
+  ['09-accessories-set.jpeg', 'Accessories Set', 'Accessories', 'Accessories', 'accessories', 'https://images.unsplash.com/photo-1520904224775-0f0220bcfd46?w=1200&q=85'],
+  ['10-bow-flats.jpeg', 'Bow Ballet Flats', 'Footwear', 'Flats', 'bow, flats', 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1200&q=85'],
+  ['11-black-sneakers.jpeg', 'Black Sneakers', 'Footwear', 'Sneakers', 'black, sneakers', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=85'],
+  ['12-off-shoulder-top-skirt.jpeg', 'Off-Shoulder Top and Skirt', 'Tops', 'Two-piece set', 'off-shoulder, set', 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=1200&q=85'],
+  ['13-black-crop-top.jpeg', 'Black Crop Top', 'Tops', 'Crop top', 'black, crop top', 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=1200&q=85'],
 ];
+
+const fallbackByFilename = Object.fromEntries(
+  localCatalog.map(([filename, , , , , fallback]) => [filename, fallback])
+);
+
+function resolveImagePath(filename) {
+  const localPath = path.join(__dirname, 'uploads', 'catalog', filename);
+  if (fs.existsSync(localPath)) {
+    return `/uploads/catalog/${filename}`;
+  }
+  return fallbackByFilename[filename] || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=1200&q=85';
+}
+
+function migrateBrokenImages(state) {
+  let changed = false;
+  for (const image of state.itemImages) {
+    if (!image.path.startsWith('/uploads/')) continue;
+    const file = path.join(__dirname, image.path.slice(1));
+    if (fs.existsSync(file)) continue;
+    const filename = path.basename(image.path);
+    const fallback = fallbackByFilename[filename];
+    if (fallback && image.path !== fallback) {
+      image.path = fallback;
+      changed = true;
+    }
+  }
+  return changed;
+}
 
 function seedLocalCatalog(state) {
   const uploader =
@@ -25,8 +55,19 @@ function seedLocalCatalog(state) {
   if (!uploader) return;
 
   for (const [filename, title, category, type, tags] of localCatalog) {
-    const imagePath = `/uploads/catalog/${filename}`;
-    if (state.itemImages.some((image) => image.path === imagePath)) continue;
+    const imagePath = resolveImagePath(filename);
+    const existingImage = state.itemImages.find((image) => {
+      if (image.path === imagePath) return true;
+      if (image.path.endsWith(`/${filename}`)) return true;
+      return false;
+    });
+
+    if (existingImage) {
+      if (existingImage.path !== imagePath && !existingImage.path.startsWith('http')) {
+        existingImage.path = imagePath;
+      }
+      continue;
+    }
 
     const itemId = nextId('items');
     state.items.push({
@@ -54,9 +95,14 @@ function seedLocalCatalog(state) {
 
 function seed() {
   const state = db.getState();
+  const migrated = migrateBrokenImages(state);
+
   if (state.users.length > 0) {
+    const before = JSON.stringify(state.itemImages);
     seedLocalCatalog(state);
-    persist();
+    if (migrated || JSON.stringify(state.itemImages) !== before) {
+      persist();
+    }
     return;
   }
 
@@ -76,7 +122,7 @@ function seed() {
     id: demoId,
     email: 'demo@rewear.com',
     password_hash: bcrypt.hashSync('demo1234', 10),
-    name: 'dhruv viradiya',
+    name: 'Alex Morgan',
     points: 120,
     role: 'user',
     created_at: new Date().toISOString(),
@@ -182,11 +228,11 @@ function seed() {
       status: 'available',
       created_at: new Date().toISOString(),
     });
-    item.images.forEach((path, sort_order) => {
+    item.images.forEach((imagePath, sort_order) => {
       state.itemImages.push({
         id: nextId('itemImages'),
         item_id: itemId,
-        path,
+        path: imagePath,
         sort_order,
       });
     });
@@ -194,7 +240,7 @@ function seed() {
 
   seedLocalCatalog(state);
   persist();
-  console.log('Seed complete: admin@rewear.com / admin123, demo@rewear.com / demo1234,dhruvviradiya22@gmail.com/123456');
+  console.log('Seed complete: admin@rewear.com / admin123, demo@rewear.com / demo1234');
 }
 
 module.exports = { seed };

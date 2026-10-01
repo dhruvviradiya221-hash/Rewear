@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { broadcast } = require('./realtime');
 
 const dataDir = path.join(__dirname, 'data');
 const dataFile = path.join(dataDir, 'db.json');
@@ -23,9 +24,34 @@ function load() {
 }
 
 let cache = load();
+let dataVersion = computeVersion(cache);
+
+function computeVersion(state = cache) {
+  const itemStamp = state.items.reduce(
+    (max, row) => Math.max(max, new Date(row.created_at || 0).getTime()),
+    0
+  );
+  const swapStamp = state.swaps.reduce(
+    (max, row) => Math.max(max, new Date(row.created_at || 0).getTime()),
+    0
+  );
+  const pending = state.items.filter((row) => row.status === 'pending').length;
+  return `${state.items.length}:${state.swaps.length}:${pending}:${itemStamp}:${swapStamp}:${state.seq.items}:${state.seq.swaps}`;
+}
+
+function getVersion() {
+  return dataVersion;
+}
 
 function persist() {
   fs.writeFileSync(dataFile, JSON.stringify(cache, null, 2));
+  dataVersion = computeVersion(cache);
+  broadcast({ type: 'data-changed', version: dataVersion, at: new Date().toISOString() });
+}
+
+function reload() {
+  cache = load();
+  dataVersion = computeVersion(cache);
 }
 
 function nextId(key) {
@@ -84,9 +110,7 @@ function getItemById(id, includePendingForAdmin = false) {
 
 const db = {
   getState: () => cache,
-  reload: () => {
-    cache = load();
-  },
+  reload,
   persist,
   nextId,
   mapItem,
@@ -94,6 +118,7 @@ const db = {
   getUploader,
   getItemRow,
   getItemById,
+  getVersion,
 };
 
-module.exports = { db, mapItem, getItemImages, getUploader, getItemById, persist, nextId };
+module.exports = { db, mapItem, getItemImages, getUploader, getItemById, persist, nextId, getVersion };

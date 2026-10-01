@@ -1,32 +1,18 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import FeaturedCarousel from '../components/FeaturedCarousel';
 import ItemCard from '../components/ItemCard';
+import LiveStatusBar from '../components/LiveStatusBar';
+import { useLiveData } from '../hooks/useLiveData';
 
 export default function Landing() {
-  const [featured, setFeatured] = useState([]);
-  const [error, setError] = useState('');
+  const { data: featured, loading, error, lastUpdated, refresh } = useLiveData(
+    () => api.featuredItems(),
+    []
+  );
 
-  useEffect(() => {
-    api
-      .featuredItems()
-      .then((res) => {
-        if (Array.isArray(res)) {
-          setFeatured(res);
-        } else if (res && Array.isArray(res.data)) {
-          setFeatured(res.data);
-        } else if (res && Array.isArray(res.items)) {
-          setFeatured(res.items);
-        } else {
-          setFeatured([]);
-        }
-      })
-      .catch((e) => {
-        setError(e?.message || 'Error loading items');
-        setFeatured([]);
-      });
-  }, []);
+  const items = Array.isArray(featured) ? featured : [];
+
   return (
     <>
       <section className="hero">
@@ -35,7 +21,8 @@ export default function Landing() {
             <p className="eyebrow">Community clothing exchange</p>
             <h1>Your style deserves more than one life.</h1>
             <p className="hero-lead">
-             Give your clothes a second life. Swap what you no longer wear, discover something new, earn points, and keep fashion moving - not filling landfills.
+              Give your clothes a second life. Swap what you no longer wear, discover something new,
+              earn points, and keep fashion moving — not filling landfills.
             </p>
             <div className="hero-cta">
               <Link to="/signup" className="btn btn-primary btn-lg">
@@ -59,38 +46,46 @@ export default function Landing() {
               <span>Admin-moderated catalog</span>
             </div>
             <div className="stat-card">
-              <strong>Full galleries</strong>
-              <span>High-quality item photos</span>
+              <strong>Live catalog</strong>
+              <span>Updates automatically in real time</span>
             </div>
           </div>
         </div>
       </section>
 
+      <LiveStatusBar loading={loading} error={error} lastUpdated={lastUpdated} onRefresh={refresh} />
+
       {error && (
         <p className="container alert alert-warn">
-          Could not load featured items. Start the backend API on port 5000.
+          Could not load featured items. Make sure the backend API is running on port 5000.
         </p>
       )}
 
-      {Array.isArray(featured) && featured.length > 0 && (
-  <FeaturedCarousel items={featured.slice(0, 5)} />
-)}
+      {items.length > 0 && <FeaturedCarousel items={items.slice(0, 5)} />}
 
-<section className="section">
-  <div className="container">
-    <div className="section-head">
-      <h2>Fresh on the rack</h2>
-      <Link to="/browse" className="text-link">
-        View full catalog &rarr;
-      </Link>
-    </div>
-    <div className="item-grid">
-      {Array.isArray(featured) && featured.slice(0, 6).map((item) => (
-        <ItemCard key={item.id} item={item} />
-      ))}
-    </div>
-  </div>
-</section>
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <h2>Fresh on the rack</h2>
+            <Link to="/browse" className="text-link">
+              View full catalog &rarr;
+            </Link>
+          </div>
+          {loading && !items.length ? (
+            <div className="item-grid skeleton-grid">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="skeleton-card" />
+              ))}
+            </div>
+          ) : (
+            <div className="item-grid">
+              {items.slice(0, 6).map((item) => (
+                <ItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="section section-muted">
         <div className="container steps">

@@ -3,6 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const { seed } = require('./seed');
+const { attachEventsRoute } = require('./realtime');
+const { getVersion } = require('./database');
 
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
@@ -17,10 +19,17 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'), {
-    maxAge: '7d',
+    maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
     setHeaders(res) {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     },
@@ -28,8 +37,14 @@ app.use(
 );
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'rewear-api' });
+  res.json({ ok: true, service: 'rewear-api', version: getVersion() });
 });
+
+app.get('/api/sync', (_req, res) => {
+  res.json({ version: getVersion(), at: new Date().toISOString() });
+});
+
+attachEventsRoute(app);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);

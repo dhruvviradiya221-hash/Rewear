@@ -6,6 +6,10 @@ export default function FeaturedCarousel({ items }) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
+    setIndex(0);
+  }, [items]);
+
+  useEffect(() => {
     if (!items?.length) return undefined;
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % items.length);

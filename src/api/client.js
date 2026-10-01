@@ -1,4 +1,6 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'https://rewear-1-m2m8.onrender.com';
+const API_BASE =
+  process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'development' ? '' : 'https://rewear-1-m2m8.onrender.com');
 
 function getToken() {
   return localStorage.getItem('rewear_token');
@@ -10,15 +12,26 @@ export function mediaUrl(path) {
   return `${API_BASE}${path}`;
 }
 
+export function getApiBase() {
+  return API_BASE;
+}
+
 async function request(path, options = {}) {
   const headers = { ...options.headers };
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   }
+  headers['Cache-Control'] = 'no-cache';
+  headers.Pragma = 'no-cache';
+
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+    cache: 'no-store',
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.error || res.statusText || 'Request failed');
@@ -26,7 +39,29 @@ async function request(path, options = {}) {
   return data;
 }
 
+export function subscribeToUpdates(onUpdate) {
+  const base = API_BASE || window.location.origin;
+  const source = new EventSource(`${base}/api/events`);
+
+  source.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      onUpdate(payload);
+    } catch {
+      /* ignore malformed events */
+    }
+  };
+
+  source.onerror = () => {
+    source.close();
+  };
+
+  return () => source.close();
+}
+
 export const api = {
+  health: () => request('/api/health'),
+  sync: () => request('/api/sync'),
   register: (body) => request('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: () => request('/api/auth/me'),
