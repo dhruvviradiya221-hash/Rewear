@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
 
+const TEAM = ['Jiya Yadav', 'Jiya Thakkar', 'Krishna Trivadi', 'Dhruv Viradiya'];
+
 export default function Footer() {
   return (
     <footer className="site-footer">
+      <div className="footer-glow" aria-hidden="true" />
       <div className="container footer-grid">
-        <div>
+        <div className="footer-about">
           <p className="footer-brand">ReWear</p>
           <p className="footer-tagline">
-            Swap your style. Earn rewards. Reduce waste.
-
+            A premium community wardrobe — swap garments, earn points, and keep fashion in motion
+            without the waste.
           </p>
         </div>
         <div>
@@ -16,18 +19,20 @@ export default function Footer() {
           <Link to="/browse">Browse catalog</Link>
           <Link to="/list">List an item</Link>
           <Link to="/signup">Create account</Link>
+          <Link to="/login">Sign in</Link>
         </div>
         <div>
-          <p className="footer-heading">Designed & Developed by</p>
-          <p className="footer-stat">Jiya Yadav</p>
-            <p className="footer-stat">Jiya Thakkar</p>
-             <p className="footer-stat">Krishna Trivadi</p>
-          <p className="footer-stat">Dhruv Viradiya</p>
+          <p className="footer-heading">Crafted by</p>
+          <ul className="footer-team">
+            {TEAM.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
         </div>
       </div>
       <div className="container footer-bottom">
-        <span>© {new Date().getFullYear()} ReWear</span>
-        <span>Sustainable fashion, shared.</span>
+        <span>© {new Date().getFullYear()} ReWear. All rights reserved.</span>
+        <span className="footer-motto">Sustainable fashion, shared with intention.</span>
       </div>
     </footer>
   );
