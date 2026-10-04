@@ -61,9 +61,6 @@ export default function Login() {
         <p className="auth-footer">
           New here? <Link to="/signup">Create an account</Link>
         </p>
-        <p className="demo-hint">
-          Demo: demo@rewear.com / demo1234 · Admin: admin@rewear.com / admin123
-        </p>
       </div>
     </div>
   );

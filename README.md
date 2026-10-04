@@ -28,13 +28,6 @@ npm start
 
 The CRA dev server proxies API requests to `http://localhost:5000`.
 
-## Demo accounts (seeded on first API start)
-
-| Role  | Email              | Password  |
-|-------|--------------------|-----------|
-| Admin | admin@rewear.com   | admin123  |
-| User  | demo@rewear.com    | demo1234  |
-
 ## Features
 
 - Email/password signup and login

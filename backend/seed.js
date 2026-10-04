@@ -19,6 +19,8 @@ const localCatalog = [
   ['13-black-crop-top.jpeg', 'Black Crop Top', 'Tops', 'Crop top', 'black, crop top', 'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=1200&q=85'],
 ];
 
+const DEMO_USER_EMAIL = 'dhruvviradiya22@gmail.com';
+
 const fallbackByFilename = Object.fromEntries(
   localCatalog.map(([filename, , , , , fallback]) => [filename, fallback])
 );
@@ -49,7 +51,7 @@ function migrateBrokenImages(state) {
 
 function seedLocalCatalog(state) {
   const uploader =
-    state.users.find((user) => user.email === 'demo@rewear.com') ||
+    state.users.find((user) => user.email === DEMO_USER_EMAIL) ||
     state.users.find((user) => user.role !== 'admin') ||
     state.users[0];
   if (!uploader) return;
@@ -120,9 +122,9 @@ function seed() {
   const demoId = nextId('users');
   state.users.push({
     id: demoId,
-    email: 'demo@rewear.com',
-    password_hash: bcrypt.hashSync('demo1234', 10),
-    name: 'Alex Morgan',
+    email: DEMO_USER_EMAIL,
+    password_hash: bcrypt.hashSync('123456', 10),
+    name: 'Dhruv Viradiya',
     points: 120,
     role: 'user',
     created_at: new Date().toISOString(),
@@ -240,7 +242,7 @@ function seed() {
 
   seedLocalCatalog(state);
   persist();
-  console.log('Seed complete: admin@rewear.com / admin123, demo@rewear.com / demo1234');
+  console.log(`Seed complete. Demo user: ${DEMO_USER_EMAIL}`);
 }
 
 module.exports = { seed };
